@@ -1,7 +1,11 @@
 import userValidationSchema from "../validations/user.validation.js"
 import User from "../models/user.model.js"
-import { hashPassword } from "../utils/helpers.js";
+import { hashPassword, comparePasswords } from "../utils/helpers.js";
+import jwt from "jsonwebtoken"
+import { JWT_SECRET_KEY } from "../config/dotenv.config.js"
 
+
+// -------------------------------- Register new user --------------------------------
 export const registerUser = async (req, res) => {
     const { name, email, password } = req.body
     // Getting only name email and password 
@@ -38,5 +42,30 @@ export const registerUser = async (req, res) => {
     catch (error) {
         console.error(error.message);
         res.status(500).json({ error: "Server error" });
+    }
+}
+
+
+// -------------------------------- login user --------------------------------
+
+export const loginUser = async (req, res) => {
+    // Get the email and password  
+    const { email, password } = req.body
+    try {
+        // get the user with email
+        const user = await User.findOne({ email });
+
+        if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+
+        // if user ? compare db password with recent enterd password
+        const isMatch = comparePasswords(password, user.password)
+        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+
+        // if password match ? create the JWT token and send it in response 
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '24h' })
+
+        return res.status(200).json({ message: 'Login successful', token: token });
+    } catch (error) {
+        return res.status(500).json({ message: 'Server error', error: error.message });
     }
 }
