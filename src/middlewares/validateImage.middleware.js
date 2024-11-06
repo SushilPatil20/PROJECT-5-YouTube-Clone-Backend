@@ -4,10 +4,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/png'];
 
 const validateImage = (req, res, next) => {
     const errors = [];
-
-    if (!req.file) {
-        errors.push('No file provided');
-    } else {
+    if (req.file) {
         const { mimetype, size } = req.file;
 
         // Check file type
@@ -20,11 +17,14 @@ const validateImage = (req, res, next) => {
             errors.push('File is too large. Maximum allowed size is 5MB.');
         }
     }
+    else {
+        return next()
+    }
+
 
     if (errors.length > 0) {
         return res.status(400).json({ errors });
     }
-
     next(); // All validations passed, proceed to next middleware
 };
 

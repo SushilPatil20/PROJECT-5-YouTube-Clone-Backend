@@ -18,9 +18,16 @@ const userSchema = mongoose.Schema({
         required: true,
         minlength: 8
     },
-    // avatar: {
-    //     type: String
-    // }
+    avatar: {
+        type: String,
+        default: null
+    },
+    channels: [{
+        type: mongoose.Schema.Types.ObjectId,  // Array of ObjectIds for referencing Channel documents
+        ref: "Channel",
+        default: []
+    }],
+
 }, { timestamps: true })
 
 const User = mongoose.model("User", userSchema);

@@ -33,7 +33,5 @@ const userValidationSchema = Joi.object({
             "string.pattern.base":
                 "Password must contain at least one letter and one number",
         }),
-
-    // Avatar is optional and validated by Multer separately
 });
 export default userValidationSchema;
