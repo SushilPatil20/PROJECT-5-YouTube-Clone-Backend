@@ -5,8 +5,8 @@ import uploadToCloudinary from "../middlewares/uploadImage.middleware.js"
 import upload from "../middlewares/handleFile.middleware.js"
 const userRoutes = express.Router()
 
-userRoutes.post('/singup', upload('avatar'), validateImage, uploadToCloudinary, registerUser)
-userRoutes.post('/singin', loginUser)
+userRoutes.post('/register', upload('avatar'), validateImage, uploadToCloudinary('user_profiles', 'avatarURL'), registerUser)
+userRoutes.post('/login', loginUser)
 
 
 

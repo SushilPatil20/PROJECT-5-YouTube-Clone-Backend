@@ -8,6 +8,9 @@ import { JWT_SECRET_KEY } from "../config/dotenv.config.js"
 // -------------------------------- Register new user --------------------------------
 export const registerUser = async (req, res) => {
     const { name, email, password } = req.body
+    // check if the file exist else set the avatar to null
+    const avatar = req.file ? req.file.avatarURL : null
+
     // Getting only name email and password 
     const userDataForValidation = { name, email, password }
     try {
@@ -26,16 +29,14 @@ export const registerUser = async (req, res) => {
         // hash the password before storing into DB
         const hashedPassword = await hashPassword(password);
 
-        // check if the file exist else set the avatar to null
-        const avatar = req.file ? req.file.avatarURL : null
+        // // create the new user in the database 
 
-        // create the new user in the database 
         const newUser = await User.create({
-            name,
-            email,
+            ...userDataForValidation,
             password: hashedPassword,
             avatar,
-        })
+        });
+
 
         return res.status(201).json({ user: newUser, message: "User registered successfully" });
     }
@@ -49,7 +50,6 @@ export const registerUser = async (req, res) => {
 // -------------------------------- login user --------------------------------
 
 export const loginUser = async (req, res) => {
-    // Get the email and password  
     const { email, password } = req.body
     try {
         // get the user with email
@@ -58,14 +58,15 @@ export const loginUser = async (req, res) => {
         if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
         // if user ? compare db password with recent enterd password
-        const isMatch = comparePasswords(password, user.password)
-        if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+        const isMatch = await comparePasswords(password, user.password)
+
+        if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
 
         // if password match ? create the JWT token and send it in response 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '24h' })
 
-        return res.status(200).json({ message: 'Login successful', token: token });
+        return res.status(200).json({ message: 'Login successful', token: token, user: user });
     } catch (error) {
-        return res.status(500).json({ message: 'Server error', error: error.message });
+        return res.status(500).json({ error: error.message });
     }
 }
