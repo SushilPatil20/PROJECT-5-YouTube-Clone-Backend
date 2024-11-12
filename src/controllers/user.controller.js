@@ -9,7 +9,7 @@ import { JWT_SECRET_KEY } from "../config/dotenv.config.js"
 export const registerUser = async (req, res) => {
     const { name, email, password } = req.body
     // check if the file exist else set the avatar to null
-    const avatar = req.file ? req.file.avatarURL : null
+    const { avatar } = req.files || null
 
     // Getting only name email and password 
     const userDataForValidation = { name, email, password }

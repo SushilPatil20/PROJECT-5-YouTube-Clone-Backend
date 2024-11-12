@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const channelSchema = new mongoose.Schema({
     channelName: {
         type: String,
@@ -18,7 +17,6 @@ const channelSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        required: true,
         trim: true,
     },
     channelBanner: {

@@ -1,8 +1,11 @@
-import multer from "multer";
+import multer from 'multer';
 
-const upload = (filedName) => {
+// Middleware to handle multiple files
+const upload = (fields) => {
     const storage = multer.memoryStorage();
-    const upload = multer({ storage }).single(filedName);
-    return upload;
-}
-export default upload;
+    return multer({
+        storage,
+    }).fields(fields);
+};
+
+export default upload

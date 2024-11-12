@@ -40,12 +40,12 @@ const channelSchema = Joi.object({
             "string.max": "Description should have at most 500 characters",
         }),
 
-    // channelBanner: Joi.string()
-    //     .uri()
-    //     .optional()
-    //     .messages({
-    //         "string.uri": "Channel banner must be a valid URL",
-    //     }),
+    channelBanner: Joi.string()
+        .uri()
+        .optional()
+        .messages({
+            "string.uri": "Channel banner must be a valid URL",
+        }),
 
     subscribers: Joi.number()
         .default(0)

@@ -12,8 +12,8 @@ import channelValidationSchema from "../validations/channel.validation.js"
 // }
 
 export const createChannel = async (req, res) => {
+
     const channelData = req.body
-    const channelBanner = req.file?.channelBanner || null
     const { error } = channelValidationSchema.validate(channelData, { abortEarly: false })
 
     if (error) {
@@ -33,10 +33,7 @@ export const createChannel = async (req, res) => {
             });
         }
 
-        const newChannel = await Channel.create({
-            ...channelData,
-            channelBanner: channelBanner
-        })
+        const newChannel = await Channel.create(channelData)
 
         return res.status(201).json({
             message: "Channel created successfully!",
@@ -55,15 +52,16 @@ export const createChannel = async (req, res) => {
 
 
 export const getChannel = async (req, res) => {
+
     const { channelId } = req.params; // Channel identifier from the URL params
     try {
         // Find channel by ID or handle
         const channel = await Channel.findOne({ _id: channelId })
-            .populate('owner', 'name email') // Populate owner details, selecting specific fields
+            .populate('owner', 'name email')
+
         // ---------- Uncomment this after creating the video model ----------
         // .populate('videos', 'title views likes') // Populate video details with selected fields
 
-        // Check if channel exists
         if (!channel) {
             return res.status(404).json({
                 message: "Channel not found."
@@ -84,3 +82,42 @@ export const getChannel = async (req, res) => {
     }
 };
 
+
+
+export const updateChannel = async (req, res) => {
+    try {
+        const { channelId } = req.params;
+        const channel = await Channel.findById(channelId);
+        if (!channel) return res.status(404).json({ error: 'Channel not found' });
+
+        const handle = channel.handle
+        const owner = channel.owner.toString()
+        const channelName = req.body.channelName || channel.channelName
+        const description = req.body.description || ""
+
+        // Initialize the object with the fields that can be updated (exclude handle and owner)
+        const updatedData = { handle, owner, channelName, description };
+
+        // Validate the updated data
+        const { error } = channelValidationSchema.validate(updatedData, { abortEarly: false });
+        if (error) return res.status(400).json({ details: error.details.map(err => err.message) });
+
+
+        // Handle file upload for the channel banner if provided
+        if (req.files?.channelBanner) updatedData.channelBanner = req.files.channelBanner;
+
+        // Only update if there are changes in the data
+        const updatedChannel = await Channel.findByIdAndUpdate(
+            channelId,
+            { $set: updatedData },
+            { new: true }
+        );
+
+        return updatedChannel ?
+            res.status(200).json({ message: 'Channel updated successfully', channel: updatedChannel }) :
+            res.status(400).json({ message: 'No new data to update' });
+
+    } catch (error) {
+        return res.status(500).json({ error: 'Failed to update channel', details: error.message });
+    }
+};

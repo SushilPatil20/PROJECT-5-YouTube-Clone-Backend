@@ -1,51 +1,51 @@
-import cloudinaryInstance from '../config/cloud.config.js'; // Import the Cloudinary configuration
+import cloudinaryInstance from '../config/cloud.config.js'; // Import Cloudinary configuration
 
-// const uploadToCloudinary = (req, res, next) => {
-//     if (!req.file) {
-//         return next(); // No file to upload, move to next middleware
-//     }
+const uploadToCloudinary = (folder = "default_folder") => {
+    return async (req, res, next) => {
+        const uploadFile = (file, folder, resourceType) => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinaryInstance.uploader.upload_stream(
+                    {
+                        folder,
+                        resource_type: resourceType,
+                    },
+                    (error, result) => {
+                        if (error) {
+                            return reject(error);
+                        }
+                        resolve(result.secure_url);
+                    }
+                );
+                uploadStream.end(file.buffer);
+            });
+        };
 
-//     // Upload file to Cloudinary
-//     const uploadStream = cloudinaryInstance.uploader.upload_stream(
-//         { folder: 'user_profiles' }, // Folder to store profile pictures
-//         (error, result) => {
-//             if (error) {
-//                 return res.status(500).json({ error: 'Cloudinary upload failed', details: error.message });
-//             }
-//             // Add the Cloudinary URL to the request object for further handling
-//             req.file.avatarURL = result.secure_url;
-//             next();
-//         }
-//     );
-//     // Pass the file buffer from multer to Cloudinary upload stream
-//     uploadStream.end(req.file.buffer);
-// }
-// export default uploadToCloudinary;
+        try {
+            for (let key in req.files) {
+                const file = req.files[key]?.[0];
 
-const uploadToCloudinary = (folder = 'default_folder', fieldName = 'imageURL') => {
-    return (req, res, next) => {
-        if (!req.file) {
-            return next(); // No file to upload, move to next middleware
-        }
+                if (file) {
+                    const mimetype = file.mimetype;
+                    let resourceType;
 
-        // Upload file to Cloudinary
-        const uploadStream = cloudinaryInstance.uploader.upload_stream(
-            { folder },
-            (error, result) => {
+                    if (mimetype.includes("image")) {
+                        resourceType = 'image';
+                    } else if (mimetype.includes("video")) {
+                        resourceType = 'video';
+                    } else {
+                        return res.status(400).json({ error: `Unsupported file type for ${key}` });
+                    }
 
-                if (error) {
-                    return res.status(500).json({ error: 'Cloudinary upload failed', details: error.message });
+                    req.files[key] = await uploadFile(file, folder, resourceType);
                 }
-
-                req.file[fieldName] = result.secure_url;
-                next();
             }
-        );
 
-        // Pass the file buffer from multer to Cloudinary upload stream
-        uploadStream.end(req.file.buffer);
+            next();
+
+        } catch (error) {
+            return res.status(500).json({ error: 'Cloudinary upload failed', details: error.message });
+        }
     };
 };
 
 export default uploadToCloudinary;
-
