@@ -12,7 +12,6 @@ const fields = [
 
 channelRoutes.post("/create", createChannel)
 channelRoutes.put("/update/:channelId", upload(fields), validateImage, uploadToCloudinary('channelImages'), updateChannel)
-// channelRoutes.put("/update/:channelId", updateChannel)
 channelRoutes.get("/get/:channelId", getChannel)
 
 

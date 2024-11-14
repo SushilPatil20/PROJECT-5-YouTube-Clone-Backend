@@ -18,6 +18,7 @@ const channelSchema = new mongoose.Schema({
     description: {
         type: String,
         trim: true,
+        default: ""
     },
     channelBanner: {
         type: String,

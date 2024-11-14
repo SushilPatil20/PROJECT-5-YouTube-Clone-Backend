@@ -15,8 +15,7 @@ const validateVideo = (req, res, next) => {
 
         return next();
     }
-
-    return res.status(400).json({ error: 'No video file uploaded' });
+    return next()
 };
 
 export default validateVideo;

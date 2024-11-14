@@ -18,6 +18,7 @@ const videoSchema = mongoose.Schema({
     description: {
         type: String,
         trim: true,
+        default: ""
     },
     channelId: {
         type: mongoose.Schema.Types.ObjectId,
