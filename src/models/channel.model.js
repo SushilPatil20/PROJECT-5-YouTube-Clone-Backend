@@ -11,10 +11,16 @@ const channelSchema = new mongoose.Schema({
         trim: true
     },
     owner: {
-        type: mongoose.Schema.Types.ObjectId,  // References the _id of a User document
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
     },
+    videos: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Video",
+        },
+    ],
     description: {
         type: String,
         trim: true,
@@ -28,10 +34,6 @@ const channelSchema = new mongoose.Schema({
         type: Number,
         default: 0,
     },
-    videos: [{
-        type: mongoose.Schema.Types.ObjectId,  // Array of ObjectIds for related Video documents
-        ref: "Video",
-    }],
 }, { timestamps: true });
 
 const Channel = mongoose.model("Channel", channelSchema);

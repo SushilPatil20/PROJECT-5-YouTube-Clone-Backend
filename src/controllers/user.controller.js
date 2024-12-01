@@ -3,6 +3,7 @@ import User from "../models/user.model.js"
 import { hashPassword, comparePasswords } from "../utils/helpers.js";
 import jwt from "jsonwebtoken"
 import { JWT_SECRET_KEY } from "../config/dotenv.config.js"
+import mongoose from "mongoose";
 
 
 // -------------------------------- Register new user --------------------------------
@@ -55,10 +56,6 @@ export const loginUser = async (req, res) => {
     try {
         // get the user with email
         const user = await User.findOne({ email });
-        console.log("User : ", user)
-        console.log("User : ", email)
-
-
 
         if (!user) return res.status(400).json({ error: 'Invalid credentials' });
 
@@ -70,8 +67,51 @@ export const loginUser = async (req, res) => {
         // if password match ? create the JWT token and send it in response 
         const token = jwt.sign({ userId: user._id }, JWT_SECRET_KEY, { expiresIn: '24h' })
 
-        return res.status(200).json({ message: 'Login successful', token: token, user: user });
+        return res.status(200).json({ message: 'Login successful', token: token, userId: user._id });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 }
+
+
+export const getUser = async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ error: "Invalid user ID format." });
+        }
+
+        // Validate the input
+        if (!userId) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'User ID is required'
+            });
+        }
+
+        // Find user by ID
+        const user = await User.findById(userId).select('-password')
+            .populate('channels')
+
+
+        if (!user) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'User not found'
+            });
+        }
+
+
+        // Success response
+        return res.status(200).json({ status: 'success', user });
+    } catch (error) {
+        console.error(`Error fetching user: ${error.message}`);
+
+        // Server error response
+        return res.status(500).json({
+            status: 'error',
+            message: 'An error occurred while fetching the user'
+        });
+    }
+};

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { commentSchema } from "./comment.model.js"
 
 const videoSchema = mongoose.Schema({
     title: {
@@ -20,15 +19,14 @@ const videoSchema = mongoose.Schema({
         trim: true,
         default: ""
     },
-    channelId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Channel",
-        required: true,
-    },
     uploader: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         required: true,
+    },
+    channelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Channel",
     },
     views: {
         type: Number,
@@ -46,10 +44,14 @@ const videoSchema = mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-    comments: {
-        type: [commentSchema],
-        default: [],
-    }
+    tags: { type: [String], default: [] },
+    comments: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Comment",
+        }
+    ]
+
 }, { timestamps: true });
 const Video = mongoose.model("Video", videoSchema);
 export default Video;

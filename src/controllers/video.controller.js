@@ -1,44 +1,18 @@
 import videoValidationSchema from "../validations/video.validation.js"
 import Video from "../models/video.model.js"
 import mongoose from "mongoose";
-import { deleteCloudinaryFile } from "../utils/helpers.js";
-
-
-// export const createVideo = async (req, res) => {
-
-/**
- *      [ 
- *          { 
- *            "title": "Learn React in 30 Minutes", 
- *            "thumbnailUrl": "https://example.com/thumbnails/react30min.png", 
- *            "description": "A quick tutorial to get started with React.", 
- *            "channelId": "channel01", 
- *            "uploader": "user01", 
- *            "views": 15200, 
- *            "likes": 1023,
- *            "dislikes": 45, 
- *            "uploadDate": "2024-09-20", 
- *            "comments": [ 
- *                           { 
- *                             "commentId": "comment01", 
- *                             "userId": "user02", 
- *                             "text":"Great video! Very helpful.", 
- *                             "timestamp": "2024-09-21T08:30:00Z" 
- *                            }
- *                        ]
- *          }
- *     ]
- */
-// }
-
+import { deleteCloudinaryFile, generateTags } from "../utils/helpers.js";
+import Channel from "../models/channel.model.js";
+import searchSchema from "../validations/searchQuerySchema.js";
 
 export const createVideo = async (req, res) => {
     const videoFiles = req.files || {}
-    const videoData = req.body
+    const { channelId, title, description } = req.body
+    const videoData = { title, description }
     const videoUrl = videoFiles.videoUrl
     const thumbnailUrl = videoFiles.thumbnailUrl
-
-    const combinedData = { videoUrl, thumbnailUrl, ...videoData }
+    const userId = req.user
+    const combinedData = { videoUrl, thumbnailUrl, ...videoData, uploader: userId, channelId }
 
     const { error } = videoValidationSchema.validate(combinedData, { abortEarly: false })
 
@@ -47,7 +21,15 @@ export const createVideo = async (req, res) => {
     }
 
     try {
-        const newVideo = await Video.create(combinedData);
+
+        // Automatically generate tags
+        const tags = generateTags(combinedData.title, combinedData.description);
+
+        const newVideo = await Video.create({ ...combinedData, tags });
+        await Channel.findByIdAndUpdate(
+            channelId,
+            { $push: { videos: newVideo._id } },
+        )
 
         return res.json({ message: "Video created successfully.", video: newVideo });
     } catch (err) {
@@ -59,28 +41,36 @@ export const createVideo = async (req, res) => {
 
 
 export const getAllVideos = async (req, res) => {
-
     try {
-        const page = parseInt(req.query.page) || 1;    // Current page number (default: 1)
-        const limit = parseInt(req.query.limit) || 12; // Number of videos per page (fixed at 12)
-        const skip = (page - 1) * limit;               // Skip calculation for pagination
-
         const videos = await Video.find({})
-            .skip(skip)
-            .limit(limit)
-            .sort({ uploadDate: -1 }) // Sort by upload date in descending order
-            .select('-__v');          // Optional: Exclude fields like `__v`
-
-        const totalVideos = await Video.countDocuments({});
-        const hasMore = page * limit < totalVideos;     // Check if there are more videos
-
-        res.json({ videos, hasMore });  // Send videos and `hasMore` flag
+            .populate('channelId')
+            .sort({ createdAt: -1 });
+        res.json({ videos });
     } catch (err) {
         console.error("Error retrieving videos:", err);
         res.status(500).json({ error: "Internal server error. Could not retrieve videos." });
     }
 };
 
+export const getAuthUserVideos = async (req, res) => {
+    const { userId } = req.params
+
+    if (!userId) {
+        return res.status(404).json({ error: "User id is required" });
+    }
+    try {
+        // Fetch videos for the authenticated user
+        const videos = await Video.find({ uploader: userId })
+            .populate('channelId')
+            .sort({ uploadDate: -1 }) // Sort by upload date in descending order
+            .select('-__v');  // Optionally exclude unwanted fields like `__v`
+
+        res.status(200).json({ videos });  // Send the videos back in the response
+    } catch (err) {
+        console.error("Error retrieving videos:", err);
+        res.status(500).json({ error: "Internal server error. Could not retrieve videos." });
+    }
+};
 
 
 // Define the getSingleVideo function to retrieve a specific video by its ID
@@ -93,7 +83,17 @@ export const getSingleVideo = async (req, res) => {
             return res.status(400).json({ error: "Invalid video ID format." });
         }
 
-        const video = await Video.findById(videoId).select('-__v'); // Exclude __v for cleaner response
+        const video = await Video.findById(videoId)
+            .populate({
+                path: "comments",
+                options: { sort: { createdAt: -1 } },
+                populate: [
+                    { path: "userId", select: "avatar" },
+                    { path: "channelId", select: "handle" }
+                ]
+            })
+            .populate('uploader', 'avatar')
+            .populate("channelId").select('-__v');
 
         // If the video doesn't exist, return a 404 response
         if (!video) {
@@ -110,10 +110,6 @@ export const getSingleVideo = async (req, res) => {
         res.status(500).json({ error: "Internal server error. Could not retrieve video." });
     }
 };
-
-
-
-
 
 
 
@@ -200,11 +196,14 @@ export const updateVideo = async (req, res) => {
             }
         });
 
+        const tags = generateTags(updateData.title, updateData.description);
+
         // Perform the update with updated fields only
         const updatedVideo = await Video.findByIdAndUpdate(
             videoId,
-            { $set: updateData },
-            { new: true, runValidators: true }  // Options: return updated doc and validate updates
+            { $set: { ...updateData, tags } },
+            { new: true, runValidators: true },
+
         );
 
         // Respond with the updated video
@@ -216,69 +215,64 @@ export const updateVideo = async (req, res) => {
 };
 
 
+export const searchVideos = async (req, res) => {
+    try {
+        // Validate the query parameter
+        const { error, value } = searchSchema.validate(req.query, { abortEarly: false });
+
+        if (error) {
+            return res.status(400).json({ error: error.details[0].message });
+        }
+
+        // 2. Sanitize and prepare the search query (basic sanitization)
+        const searchTitle = value.title.trim(); // Trim spaces from the search string
+
+        // 3. Perform the search (case-insensitive)
+        const videos = await Video.find({
+            title: { $regex: searchTitle, $options: "i" }, // 'i' for case-insensitive
+        })
+            .populate('uploader', 'avatar')
+            .populate("channelId", "channelName").select('-__v');
+
+        // 4. Check if there are results
+        if (!videos || videos.length === 0) {
+            return res.status(404).json({ error: "No videos found" });
+        }
+
+        // 5. Return the search results
+        return res.status(200).json({ videos });
+    } catch (err) {
+        console.error("Error searching videos:", err);
+        return res.status(500).json({ error: "An error occurred while searching videos" });
+    }
+};
 
 
+export const getRecommendedVideos = async (req, res) => {
+    try {
+        const { videoId } = req.params;
+
+        // Fetch the current video
+        const currentVideo = await Video.findById(videoId);
+
+        if (!currentVideo) {
+            return res.status(404).json({ message: 'Video not found' });
+        }
+
+        // Find videos with at least one matching tag (excluding the current video)
+        const recommendedVideos = await Video.find({
+            _id: { $ne: videoId }, // Exclude current video
+            tags: { $in: currentVideo.tags }, // Match at least one tag
+        })
+            .populate("channelId", "channelName")
+            .select('-__v')
+            .sort({ createdAt: -1 })
+            .limit(10); // Limit to 10 recommendations
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/**
-  * --------------- Required fileds ---------------
-  *
-  * --------------- title
-  * --------------- videoUrl -------------------- Files
-  * --------------- thumbnailUrl ---------------- Files
-  * --------------- channelId
-  * --------------- uploader
-  *
-  * --------------- All fileds fileds ---------------
-  *
-  * --------------- Description  optional
-  * --------------- views default 0
-  * --------------- likes default 0
-  * --------------- dislikes default 0
-  * --------------- comments default []
-  */
-
-
-
-
-
-
-// Joi.object({
-//     userId: Joi.string().required().messages({
-//         "string.base": "User ID must be a string",
-//         "string.empty": "User ID is required",
-//     }),
-//     content: Joi.string().max(500).required().messages({
-//         "string.base": "Content must be a string",
-//         "string.empty": "Content is required",
-//         "string.max": "Content should have at most 500 characters",
-//     }),
-//     timestamp: Joi.date().default(() => new Date()).messages({
-//         "date.base": "Timestamp must be a valid date",
-//     }),
-// })
+        res.status(200).json(recommendedVideos);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+};

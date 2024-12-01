@@ -4,7 +4,17 @@ import mongoose from "mongoose";
 export const commentSchema = mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "User", // Reference to the User model
+        ref: "User",
+        required: true,
+    },
+    videoId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Video",
+        required: true,
+    },
+    channelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Channel",
         required: true,
     },
     text: {
@@ -12,11 +22,7 @@ export const commentSchema = mongoose.Schema({
         required: true,
         trim: true,
     },
-    timestamp: {
-        type: Date,
-        default: Date.now,
-    }
-});
+}, { timestamps: true });
 
 const Comment = mongoose.model("Comment", commentSchema)
 export default Comment;

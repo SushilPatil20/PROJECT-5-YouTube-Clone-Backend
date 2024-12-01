@@ -12,7 +12,6 @@ const validateVideo = (req, res, next) => {
         if (videoFile.size > MAX_VIDEO_FILE_SIZE) {
             return res.status(400).json({ error: 'Video file is too large' });
         }
-
         return next();
     }
     return next()

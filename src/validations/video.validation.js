@@ -38,18 +38,18 @@ const videoValidationSchema = Joi.object({
             "string.max": "Description should have at most 1000 characters",
         }),
 
-    channelId: Joi.string()
-        .required()
-        .messages({
-            "string.base": "Channel ID must be a string",
-            "string.empty": "Channel ID is required",
-        }),
-
     uploader: Joi.string()
         .required()
         .messages({
             "string.base": "Uploader ID must be a string",
             "string.empty": "Uploader ID is required",
+        }),
+
+    channelId: Joi.string()
+        .required()
+        .messages({
+            "string.base": "Channel ID must be a string",
+            "string.empty": "Channel ID is required",
         }),
 
     views: Joi.number()

@@ -1,5 +1,6 @@
 
 import Channel from "../models/channel.model.js"
+import User from "../models/user.model.js"
 import { deleteCloudinaryFile } from "../utils/helpers.js"
 import channelValidationSchema from "../validations/channel.validation.js"
 import mongoose from "mongoose"
@@ -15,8 +16,8 @@ import mongoose from "mongoose"
 
 export const createChannel = async (req, res) => {
     const channelData = req.body
+    const userId = req.user
 
-    console.log("Channel Name : ", channelData)
     const { error } = channelValidationSchema.validate(channelData, { abortEarly: false })
 
     if (error) {
@@ -27,8 +28,11 @@ export const createChannel = async (req, res) => {
 
     try {
         const existingChannel = await Channel.findOne({
-            $or: [{ channelName: channelData.channelName }, { handle: channelData.handle }]
-        })
+            $or: [
+                { channelName: { $regex: `^${channelData.channelName}$`, $options: "i" } },
+                { handle: { $regex: `^${channelData.handle}$`, $options: "i" } }
+            ]
+        });
 
         if (existingChannel) {
             return res.status(409).json({
@@ -36,15 +40,18 @@ export const createChannel = async (req, res) => {
             });
         }
 
-        const newChannel = await Channel.create(channelData)
+        const newChannel = await Channel.create({ ...channelData, owner: userId })
+
+        await User.findByIdAndUpdate(
+            userId,
+            { $push: { channels: newChannel._id } },
+        )
 
         return res.status(201).json({
             message: "Channel created successfully!",
-            channel: newChannel
         });
     }
     catch (error) {
-        console.error("Error creating channel:", error);
         return res.status(500).json({
             message: "An error occurred while creating the channel. Please try again.",
             error: error.message
@@ -54,9 +61,11 @@ export const createChannel = async (req, res) => {
 
 
 
-export const getChannel = async (req, res) => {
+export const getChannelById = async (req, res) => {
 
     const { channelId } = req.params; // Channel identifier from the URL params
+
+
     try {
         // Find channel by ID or handle
         const channel = await Channel.findOne({ _id: channelId })
@@ -86,30 +95,72 @@ export const getChannel = async (req, res) => {
 };
 
 
+/**
+ * Controller to fetch channel details by its handle.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ */
+export const getChannelByHandle = async (req, res) => {
+    const { handle } = req.params;
+
+    // Validate the handle parameter
+    if (!handle || typeof handle !== "string") {
+        return res.status(400).json({ message: "Invalid channel handle provided" });
+    }
+
+    try {
+        // Fetch channel details
+        const channel = await Channel.findOne({ handle }).populate({
+            path: "owner",
+            select: "-password",
+        }).populate('videos');
+
+
+        if (!channel) {
+            return res.status(404).json({ message: "Channel not found" });
+        }
+
+        // Respond with channel details
+        res.status(200).json(channel);
+    } catch (error) {
+        console.error(`Error fetching channel with handle ${handle}:`, error); // Server-side logging
+        res.status(500).json({
+            message: "Internal server error while fetching channel",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
+
+
+
+
+
 
 export const updateChannel = async (req, res) => {
+    const { channelId } = req.params;
     try {
-        const { channelId } = req.params;
-
         if (!mongoose.Types.ObjectId.isValid(channelId)) {
             return res.status(400).json({ error: "Invalid channel ID format." });
         }
-
 
         const channel = await Channel.findById(channelId);
         if (!channel) return res.status(404).json({ error: 'Channel not found' });
 
         const handle = channel.handle
-        const owner = channel.owner.toString()
         const channelName = req.body.channelName || channel.channelName
         const description = req.body.description || channel.description
 
-
         // Initialize the object with the fields that can be updated (exclude handle and owner)
-        const updatedData = { handle, owner, channelName, description };
+        const updatedData = { handle, channelName, description };
 
         // Validate the updated data
         const { error } = channelValidationSchema.validate(updatedData, { abortEarly: false });
+        // console.log("These are the errors : ", error)
         if (error) return res.status(400).json({ details: error.details.map(err => err.message) });
 
 

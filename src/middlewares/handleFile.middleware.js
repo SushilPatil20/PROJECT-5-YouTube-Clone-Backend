@@ -6,7 +6,6 @@ const upload = (fields) => {
     return multer({
         storage,
     }).fields(fields);
-
 };
 
 export default upload

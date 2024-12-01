@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import cloudinaryInstance from "../config/cloud.config.js"; // Import Cloudinary configuration
+import compromise from "compromise"
 
 
 
@@ -63,3 +64,20 @@ export const deleteCloudinaryFile = async (fileUrl = "", resourceType) => {
         }
     }
 };
+
+
+
+
+/**
+ * Generates tags based on the video title and description.
+ * @param {string} title - The video title.
+ * @param {string} description - The video description.
+ * @returns {string[]} Array of generated tags.
+ */
+export const generateTags = (title, description) => {
+    const text = `${title} ${description}`;
+    const doc = compromise(text);
+    const keywords = doc.nouns().out('array'); // Extract nouns as potential tags
+    return Array.from(new Set(keywords)).slice(0, 15); // Return unique tags (limit to 15)
+};
+

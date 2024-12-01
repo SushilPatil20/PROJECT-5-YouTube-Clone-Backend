@@ -6,13 +6,9 @@ const validateImage = (req, res, next) => {
         for (let key in req.files) {
             const { mimetype } = req.files[key]?.[0];
             const image = mimetype.split("/")[0];
-
             if (image === "image") {
                 const imageFile = req.files[key]?.[0];
-
                 if (imageFile) {
-                    const { mimetype } = imageFile;
-
                     if (!ALLOWED_FILE_TYPES.includes(mimetype)) {
                         return res.status(400).json({ error: `Invalid image format for ${key}` });
                     }
