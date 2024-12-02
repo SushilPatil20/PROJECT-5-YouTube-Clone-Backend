@@ -276,3 +276,33 @@ export const getRecommendedVideos = async (req, res) => {
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
+
+
+
+export const getFilteredVideos = async (req, res) => {
+    try {
+        const { category } = req.params;  // or use req.query.category for query params
+
+        // Initialize the filter object
+        let filter = {};
+
+        // Apply the filter only if the category is not "All"
+        if (category && category !== "All") {
+            filter.category = category;
+        }
+
+        // Fetch the videos from the database based on the filter
+        const videos = await Video.find(filter)
+            .populate('uploader', 'avatar')
+            .populate("channelId", "channelName").select('-__v')
+            .sort({ createdAt: -1 });  // This applies the filter condition
+
+        // Send back the filtered videos
+        res.status(200).json({ videos });
+
+    } catch (error) {
+        // Log and return an error if something goes wrong
+        console.error('Error fetching filtered videos:', error);
+        res.status(500).json({ message: 'Error fetching videos, please try again later' });
+    }
+};

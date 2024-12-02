@@ -2,8 +2,6 @@ import bcrypt from 'bcrypt';
 import cloudinaryInstance from "../config/cloud.config.js"; // Import Cloudinary configuration
 import compromise from "compromise"
 
-
-
 /**
  * Hashes a plain text password for secure storage in the database.
  * @param {String} password - The plain text password to be hashed.
@@ -13,7 +11,6 @@ export const hashPassword = async (password) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     return hashedPassword;
 };
-
 
 /**
  * Compares a plain password with a hashed password.
@@ -30,7 +27,6 @@ export const comparePasswords = async (plainPassword, hashedPassword) => {
         return false;
     }
 };
-
 
 /**
  * Deletes a file from Cloudinary based on its URL.
@@ -65,9 +61,6 @@ export const deleteCloudinaryFile = async (fileUrl = "", resourceType) => {
     }
 };
 
-
-
-
 /**
  * Generates tags based on the video title and description.
  * @param {string} title - The video title.
@@ -80,4 +73,3 @@ export const generateTags = (title, description) => {
     const keywords = doc.nouns().out('array'); // Extract nouns as potential tags
     return Array.from(new Set(keywords)).slice(0, 15); // Return unique tags (limit to 15)
 };
-

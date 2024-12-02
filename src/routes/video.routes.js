@@ -3,7 +3,7 @@ import validateVideo from "../middlewares/validateVideo.middlewares.js"
 import validateImage from "../middlewares/validateImage.middleware.js";
 import upload from "../middlewares/handleFile.middleware.js"
 import uploadToCloudinary from "../middlewares/uploadImage.middleware.js"
-import { createVideo, deleteVideo, getAuthUserVideos, getAllVideos, getSingleVideo, updateVideo, searchVideos, getRecommendedVideos } from "../controllers/video.controller.js";
+import { createVideo, deleteVideo, getAuthUserVideos, getAllVideos, getSingleVideo, updateVideo, searchVideos, getRecommendedVideos, getFilteredVideos } from "../controllers/video.controller.js";
 import authToken from "../middlewares/auth.middleware.js"
 
 const videoRoutes = express.Router();
@@ -21,5 +21,6 @@ videoRoutes.put('/update/:videoId', authToken, upload(fields), validateImage, va
 videoRoutes.delete('/delete/:videoId', authToken, deleteVideo)
 videoRoutes.get('/search', searchVideos)
 videoRoutes.get('/recommended/:videoId', getRecommendedVideos);
+videoRoutes.get('/filtered/:category', getFilteredVideos);
 
 export default videoRoutes 
