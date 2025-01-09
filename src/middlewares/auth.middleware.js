@@ -3,6 +3,7 @@ import { JWT_SECRET_KEY } from '../config/dotenv.config.js';
 
 // ----------- Middleware to protect routes
 export const authToken = (req, res, next) => {
+
     // ----------- Get the token from the Authorization header -----------
     const token = req.header('Authorization')?.split(' ')[1]; // ------------ Bearer token
     if (!token) {

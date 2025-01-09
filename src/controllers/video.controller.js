@@ -46,6 +46,7 @@ export const getAllVideos = async (req, res) => {
             .populate('channelId')
             .sort({ createdAt: -1 });
         res.json({ videos });
+
     } catch (err) {
         console.error("Error retrieving videos:", err);
         res.status(500).json({ error: "Internal server error. Could not retrieve videos." });

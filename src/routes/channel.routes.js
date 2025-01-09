@@ -11,6 +11,7 @@ const fields = [
     { name: "channelBanner", maxCount: 1 }
 ]
 
+
 channelRoutes.post("/create", authToken, createChannel)
 channelRoutes.put("/update/:channelId", authToken, upload(fields), validateImage, uploadToCloudinary('channelImages'), updateChannel)
 channelRoutes.get("/getById/:channelId", getChannelById)
